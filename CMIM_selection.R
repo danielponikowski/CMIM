@@ -7,8 +7,21 @@ X <- BreastCancer[obserwacje_bez_NA , -c(1, 11)]
 y <- BreastCancer[obserwacje_bez_NA , 11]
 
 
-####KROk 1
+
 CMIM_selection <- function(X,y,kmax){
+  stopifnot(is.numeric(kmax),kmax < ncol(X),is.matrix(X) | is.data.frame(X))
+  if (kmax == 1){
+    wybrane_zmienne <- list()
+    zmienne <- 1:ncol(X)
+    entropia <- unlist(lapply(X,function(x) entropy(x) - condentropy(X = x,
+                                                                     Y = y,
+                                                                     method = "emp")))
+    wybrane_zmienne[["zmienne"]] <- which.max(entropia)
+    wybrane_zmienne[["wynik"]] <- max(entropia)
+    wybrane_zmienne
+  }
+  else{
+  ####KROk 1
   wybrane_zmienne <- list()
   zmienne <- 1:ncol(X)
   entropia <- unlist(lapply(X,function(x) entropy(x) - condentropy(X = x,
@@ -41,9 +54,15 @@ CMIM_selection <- function(X,y,kmax){
   }
   wybrane_zmienne$zmienne <- unname(wybrane_zmienne$zmienne)
   wybrane_zmienne
+    }
   }
 
 
-CMIM_sel <- CMIM_selection(X = X,y = y,kmax = 9)
+CMIM_sel <- CMIM_selection(X = X,y = y,kmax  = 5)
 
 round(CMIM_sel$wynik,4)
+
+CMIM_sel <- CMIM_selection(X = X,y = y,kmax  = 1)
+
+round(CMIM_sel$wynik,4)
+
