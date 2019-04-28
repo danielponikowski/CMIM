@@ -1,0 +1,71 @@
+---
+title: "Przykład użycia CMIM"
+author: "Daniel Ponikowski"
+date: "28 kwietnia 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+source("../CMIM_selection.R")
+library(infotheo)
+library(tidyverse)
+library(mlbench)
+library(caret)
+library(reshape)
+```
+
+# Wywołanie Funkcji:
+
+Dokładny opis opisany jest w książce: *Cover, T. M. and Thomas, J. A. (1990). Elements of Information Theory. John Wiley, New York*.
+
+Uzyje znanego zbioru danych *BreastCancer* z pakietu *mlbench*. Potrzebujemy danych bez brakow danych oraz zmienna objasnianą jako zmienna kategoryczna.
+```{r}
+data("BreastCancer")
+X <- BreastCancer %>% na.omit %>% "["(,-c(1,11))
+y <- BreastCancer$Class[as.numeric(row.names(X))]
+
+CMIM_selection(X,y,5)
+```
+
+
+## Sprawdzenie działania algorytmu na zmiennych wybranych przez algorytm CMIM.
+
+Dla 3,4,...,9 wybranych zmiennych zastosuje algorymt regresji logistycznej na tych danych i ocenie jego działanie.
+
+### Podział na zbiór treningowy i testowy
+```{r}
+data <- BreastCancer[,-1] %>% na.omit()
+train_num <- createDataPartition(y = data$Class,p = 0.8,list = FALSE)
+train_dataset <- data[train_num,]
+test <- data[-train_num,]
+```
+
+```{r,include=FALSE}
+X_train <- train_dataset[,-10]
+X_test <- test[,-10]
+y_train <- train_dataset$Class
+y_test <- test$Class
+
+wyniki <- data.frame()
+
+zmienne <- CMIM_selection(X = train_dataset[,-10],y = train_dataset$Class,kmax = 9)$S
+
+for (i in 3:9){
+  logit <- train(Class~.,data = train_dataset[,c(zmienne[1:i],10)],method = "glmnet",family = "binomial")      
+  conf <- confusionMatrix(predict(logit,test),test$Class)
+  wyniki <- rbind(wyniki,c(i,conf$overall)[1:5])
+  }
+
+colnames(wyniki) <- c("var_number",names(conf$overall)[1:4])
+
+```
+
+```{r,echo=FALSE,include = TRUE}
+wyniki2 <- melt(wyniki,id = "var_number")
+wyniki2$value <- round(wyniki2$value,3)
+
+ggplot(wyniki2,aes(x = var_number,y = value, fill = variable)) + geom_bar(stat = "identity", position=position_dodge()) +
+   theme_minimal() +
+  scale_fill_brewer(palette="Paired") + ggtitle(label = "Model Performance") + theme(plot.title = element_text(hjust = 0.5)) +
+  ylab(label = "value")
+```
