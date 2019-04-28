@@ -23,7 +23,11 @@ Uzyje znanego zbioru danych *BreastCancer* z pakietu *mlbench*. Potrzebujemy dan
 data("BreastCancer")
 X <- BreastCancer %>% na.omit %>% "["(,-c(1,11))
 y <- BreastCancer$Class[as.numeric(row.names(X))]
+```
 
+
+Przykład użycia
+```{r}
 CMIM_selection(X,y,5)
 ```
 
@@ -68,4 +72,18 @@ ggplot(wyniki2,aes(x = var_number,y = value, fill = variable)) + geom_bar(stat =
    theme_minimal() +
   scale_fill_brewer(palette="Paired") + ggtitle(label = "Model Performance") + theme(plot.title = element_text(hjust = 0.5)) +
   ylab(label = "value")
+```
+
+## Roznice w kolejnosci
+
+Sprawdzmy takze roznice w kolejnosci ważnosci zmiennych w porownaniu do wbudowanej w pakiet *caret* funkcji *rfe*, czyli popularnego sposobu wyboru zmiennych do modelu.
+
+```{r}
+CMIM_sel
+
+ctrl <- rfeControl()
+
+rfe_breastcancer <- rfe(x = X_train,y = y_train,rfeControl = ctrl)
+
+rfe_breastcancer
 ```
