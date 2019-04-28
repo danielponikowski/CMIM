@@ -76,14 +76,41 @@ ggplot(wyniki2,aes(x = var_number,y = value, fill = variable)) + geom_bar(stat =
 
 ## Roznice w kolejnosci
 
-Sprawdzmy takze roznice w kolejnosci ważnosci zmiennych w porownaniu do wbudowanej w pakiet *caret* funkcji *rfe*, czyli popularnego sposobu wyboru zmiennych do modelu.
+Sprawdzmy takze roznice w kolejnosci ważnosci zmiennych w porownaniu do wbudowanej w pakiet *caret* funkcji *varImp*, uzywajac modelu lasu losowego (zbudowanego na wszystkich zmiennch).
+Wybiore 5 najlepszych zmiennych dla obu metod i zbuduje klasyfikator na nich, oraz je porownam (bedzie to pojedyncze drzewo, poniewaz jest to dosc prosty zbior, wybralem słabszy klasyfikator).
+```{r,echo=FALSE,include = TRUE}
+CMIM_best5 <- CMIM_sel$S[1:5]
 
-```{r}
-CMIM_sel
+rf <- train(x = X_train,y = y_train,"rf")
+rf_varImp <- varImp(rf,scale = FALSE)
 
-ctrl <- rfeControl()
+var_impRF <- rf_varImp$importance$Overall
+names(var_impRF) <- rownames(as.data.frame(rf_varImp$importance))
+var_impRF <- sort(var_impRF,decreasing = TRUE)
 
-rfe_breastcancer <- rfe(x = X_train,y = y_train,rfeControl = ctrl)
+rf_best5 <- names(var_impRF)[1:5]
+rf_best5 <- which(colnames(X_train) %in% rf_best5)
 
-rfe_breastcancer
+rf_varRF <- train(x = X_train[,rf_best5], y = y_train,"rpart")
+rf_varCMIM <- train(x = X_train[,CMIM_best5], y = y_train,"rpart")
+
+conf_rf <- confusionMatrix(predict(rf_varRF,test),test$Class)
+conf_CMIM <- confusionMatrix(predict(rf_varCMIM,test),test$Class)
+
+wynik <- data.frame(rbind(c("metoda"= "rf",round(c(conf_rf$overall[1:4]),3)),
+c("metoda" = "CMIM",round(conf_CMIM$overall[1:4],3))))
+
+wynik2 <- melt(wynik, id = "metoda")
+wynik2$value <- as.numeric(levels(wynik2$value))
+
+
+ggplot(wynik2,aes(x = metoda,y = value,fill = variable)) + geom_bar(stat = "identity", position=position_dodge()) +
+   theme_minimal()  +
+  scale_fill_brewer(palette="Paired") + ggtitle(label = "Model Performance") + theme(plot.title = element_text(hjust = 0.5)) +
+  ylab(label = "value") 
+
+print(paste("Zmienne wybrane przez algorytm CMIM:",paste(colnames(X_train)[CMIM_best5],collapse = ", ")))
+print(paste("Zmienne wybrane przez algorytm rf:",paste(colnames(X_train)[rf_best5],collapse = ", ")))
 ```
+
+Więc można powiedzieć ze lepsze zmienne zostały wybrane przez metode *CMIM*, rozncie nie są duze, poniewaz zbior danych nie jest trudny. Jednak pokazuje to skuteczność metody CMIM.
